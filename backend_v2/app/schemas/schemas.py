@@ -27,6 +27,8 @@ class FeatureBreakdown(BaseModel):
 class StressPredictionResponse(BaseModel):
     stress_percent: float
     level: str
+    confidence_percent: float
+    confidence_label: str
     advice: list[str]
     feature_breakdown: FeatureBreakdown
 
