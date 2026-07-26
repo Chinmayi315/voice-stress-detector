@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import React, { useState } from "react";
 import { Button, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { getErrorMessage } from "../../utils";
 
 const BASE_URL = "https://voice-stress-detector.onrender.com";
 
@@ -21,7 +22,7 @@ export default function LoginScreen() {
       router.push("/explore");
     } catch (e: any) {
       console.log("FULL ERROR:", JSON.stringify(e, null, 2));
-      setError(e.response?.data?.detail || "Registration failed");
+      setError(getErrorMessage(e));
     }
   };
 
@@ -33,7 +34,7 @@ export default function LoginScreen() {
       router.push("/explore");
     } catch (e: any) {
       console.log("FULL ERROR:", JSON.stringify(e, null, 2));
-      setError(e.response?.data?.detail || "Login failed");
+      setError(getErrorMessage(e));
     }
   };
 

@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import React, { useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { getErrorMessage } from "../../utils";
 
 const BASE_URL = "https://voice-stress-detector.onrender.com";
 
@@ -56,7 +57,7 @@ export default function RecordScreen() {
       router.push({ pathname: "/modal", params: { result: JSON.stringify(res.data) } });
     } catch (e: any) {
       console.log("PREDICT ERROR:", JSON.stringify(e, null, 2));
-      setError(e.response?.data?.detail || "Something went wrong. Try again.");
+      setError(getErrorMessage(e));
     } finally {
       setLoading(false);
     }

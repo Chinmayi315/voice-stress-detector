@@ -41,7 +41,7 @@ export default function ResultsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, paddingTop: 60 },
   percent: { fontSize: 48, fontWeight: "bold", textAlign: "center" },
-  level: { fontSize: 20, textAlign: "center", marginBottom: 20, color: "#555" },
+  level: { fontSize: 20, textAlign: "center", color: "#555" },
   sectionTitle: { fontSize: 16, fontWeight: "bold", marginTop: 20, marginBottom: 8 },
   adviceItem: { fontSize: 14, marginBottom: 4 },
   breakdownItem: { fontSize: 14, marginBottom: 4 },
