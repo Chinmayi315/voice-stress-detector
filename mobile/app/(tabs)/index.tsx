@@ -2,7 +2,8 @@ import axios from "axios";
 import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import React, { useState } from "react";
-import { Button, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Colors, Radius, Spacing } from "../../constants/appTheme";
 import { getErrorMessage } from "../../utils";
 
 const BASE_URL = "https://voice-stress-detector.onrender.com";
@@ -12,76 +13,138 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   const handleRegister = async () => {
     setError("");
+    setLoading(true);
     try {
       const res = await axios.post(`${BASE_URL}/api/auth/register`, { email, password });
       await SecureStore.setItemAsync("token", res.data.access_token);
       router.push("/explore");
     } catch (e: any) {
-      console.log("FULL ERROR:", JSON.stringify(e, null, 2));
       setError(getErrorMessage(e));
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleLogin = async () => {
     setError("");
+    setLoading(true);
     try {
       const res = await axios.post(`${BASE_URL}/api/auth/login`, { email, password });
       await SecureStore.setItemAsync("token", res.data.access_token);
       router.push("/explore");
     } catch (e: any) {
-      console.log("FULL ERROR:", JSON.stringify(e, null, 2));
       setError(getErrorMessage(e));
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Voice Stress Detector</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        autoCapitalize="none"
-      />
-      <View style={styles.passwordRow}>
-        <TextInput
-          style={styles.passwordInput}
-          placeholder="Password"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry={!showPassword}
-        />
-        <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-          <Text style={styles.toggleText}>{showPassword ? "Hide" : "Show"}</Text>
-        </TouchableOpacity>
+    <KeyboardAvoidingView
+      style={styles.flex}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
+      <View style={styles.container}>
+        <Text style={styles.emoji}>🎙️</Text>
+        <Text style={styles.title}>Voice Stress Detector</Text>
+        <Text style={styles.subtitle}>Log in or create an account to begin</Text>
+
+        <View style={styles.card}>
+          <TextInput
+            style={styles.input}
+            placeholder="Email"
+            placeholderTextColor={Colors.textSecondary}
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+          />
+          <View style={styles.passwordRow}>
+            <TextInput
+              style={styles.passwordInput}
+              placeholder="Password"
+              placeholderTextColor={Colors.textSecondary}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+            />
+            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+              <Text style={styles.toggleText}>{showPassword ? "Hide" : "Show"}</Text>
+            </TouchableOpacity>
+          </View>
+
+          {error ? <Text style={styles.error}>{error}</Text> : null}
+
+          <TouchableOpacity
+            style={[styles.button, styles.primaryButton]}
+            onPress={handleLogin}
+            disabled={loading}
+          >
+            <Text style={styles.primaryButtonText}>{loading ? "..." : "Login"}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.button, styles.secondaryButton]}
+            onPress={handleRegister}
+            disabled={loading}
+          >
+            <Text style={styles.secondaryButtonText}>Create Account</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-      <Button title="Register" onPress={handleRegister} />
-      <View style={{ height: 10 }} />
-      <Button title="Login" onPress={handleLogin} />
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", padding: 20 },
-  title: { fontSize: 24, fontWeight: "bold", marginBottom: 30, textAlign: "center" },
-  input: { borderWidth: 1, borderColor: "#ccc", borderRadius: 8, padding: 12, marginBottom: 12 },
+  flex: { flex: 1, backgroundColor: Colors.background },
+  container: { flex: 1, justifyContent: "center", padding: Spacing.lg },
+  emoji: { fontSize: 48, textAlign: "center", marginBottom: Spacing.sm },
+  title: { fontSize: 26, fontWeight: "700", textAlign: "center", color: Colors.textPrimary },
+  subtitle: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    textAlign: "center",
+    marginTop: 6,
+    marginBottom: Spacing.lg,
+  },
+  card: {
+    backgroundColor: Colors.card,
+    borderRadius: Radius.lg,
+    padding: Spacing.lg,
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: Radius.sm,
+    padding: 14,
+    marginBottom: Spacing.sm,
+    color: Colors.textPrimary,
+  },
   passwordRow: {
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    marginBottom: 12,
-    paddingRight: 12,
+    borderColor: Colors.border,
+    borderRadius: Radius.sm,
+    marginBottom: Spacing.md,
+    paddingRight: 14,
   },
-  passwordInput: { flex: 1, padding: 12 },
-  toggleText: { color: "#007AFF", fontWeight: "600" },
-  error: { color: "red", marginBottom: 10 },
+  passwordInput: { flex: 1, padding: 14, color: Colors.textPrimary },
+  toggleText: { color: Colors.primary, fontWeight: "600", fontSize: 13 },
+  error: { color: Colors.danger, marginBottom: Spacing.sm, fontSize: 13 },
+  button: { paddingVertical: 14, borderRadius: Radius.sm, alignItems: "center", marginTop: Spacing.sm },
+  primaryButton: { backgroundColor: Colors.primary },
+  primaryButtonText: { color: "#fff", fontWeight: "700", fontSize: 16 },
+  secondaryButton: { backgroundColor: "transparent" },
+  secondaryButtonText: { color: Colors.primary, fontWeight: "600", fontSize: 14 },
 });
