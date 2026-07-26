@@ -40,4 +40,4 @@ Mobile app setup instructions will be added once that folder exists.
 
 ## Team
 
-Built by [your team names here] as a semester project.
+Built by Chinmayi MH [Team leader], H C Ganavi, Jasmine Vegas, Meghana T [Team members] as a semester project.
