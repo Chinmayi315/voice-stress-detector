@@ -27,7 +27,7 @@ This code expires in 15 minutes. If you didn't request this, you can ignore this
     msg["From"] = GMAIL_ADDRESS
     msg["To"] = to_email
 
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+    with smtplib.SMTP("smtp.gmail.com", 587) as server:
+        server.starttls()
         server.login(GMAIL_ADDRESS, GMAIL_APP_PASSWORD)
         server.sendmail(GMAIL_ADDRESS, to_email, msg.as_string())
-        
