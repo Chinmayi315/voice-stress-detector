@@ -1,36 +1,50 @@
+import { useFocusEffect } from "@react-navigation/native";
 import axios from "axios";
 import { Audio } from "expo-av";
 import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Colors, Radius, Spacing } from "../../constants/appTheme";
 import { getErrorMessage } from "../../utils";
 
 const BASE_URL = "https://voice-stress-detector.onrender.com";
+const RECORDING_SECONDS = 10;
 
 export default function RecordScreen() {
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
+  const [secondsLeft, setSecondsLeft] = useState(RECORDING_SECONDS);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [checkingAuth, setCheckingAuth] = useState(true);
   const router = useRouter();
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const recordingRef = useRef<Audio.Recording | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      const checkAuth = async () => {
+        const token = await SecureStore.getItemAsync("token");
+        if (!token) {
+          router.replace("/");
+        } else if (active) {
+          setCheckingAuth(false);
+        }
+      };
+      setCheckingAuth(true);
+      checkAuth();
+      return () => {
+        active = false;
+      };
+    }, [])
+  );
+
   const handleLogout = async () => {
+    if (timerRef.current) clearInterval(timerRef.current);
     await SecureStore.deleteItemAsync("token");
     router.replace("/");
   };
-
-  useEffect(() => {
-    const checkAuth = async () => {
-      const token = await SecureStore.getItemAsync("token");
-      if (!token) {
-        router.replace("/");
-      } else {
-        setCheckingAuth(false);
-      }
-    };
-    checkAuth();
-  }, []);
 
   const startRecording = async () => {
     setError("");
@@ -41,21 +55,37 @@ export default function RecordScreen() {
     }
 
     await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
-    const { recording } = await Audio.Recording.createAsync(
+    const { recording: newRecording } = await Audio.Recording.createAsync(
       Audio.RecordingOptionsPresets.HIGH_QUALITY
     );
-    setRecording(recording);
+    recordingRef.current = newRecording;
+    setRecording(newRecording);
+    setSecondsLeft(RECORDING_SECONDS);
+
+    timerRef.current = setInterval(() => {
+      setSecondsLeft((prev) => {
+        if (prev <= 1) {
+          if (timerRef.current) clearInterval(timerRef.current);
+          finishRecording();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
   };
 
-  const stopRecording = async () => {
-    if (!recording) return;
+  const finishRecording = async () => {
+    const activeRecording = recordingRef.current;
+    if (!activeRecording) return;
+
     setLoading(true);
     setError("");
+    setRecording(null);
+    recordingRef.current = null;
 
     try {
-      await recording.stopAndUnloadAsync();
-      const uri = recording.getURI();
-      setRecording(null);
+      await activeRecording.stopAndUnloadAsync();
+      const uri = activeRecording.getURI();
 
       const token = await SecureStore.getItemAsync("token");
       const formData = new FormData();
@@ -97,10 +127,10 @@ export default function RecordScreen() {
       </View>
 
       <Text style={styles.title}>
-        {recording ? "Recording..." : "Record your voice"}
+        {recording ? `Recording... ${secondsLeft}s` : "Record your voice"}
       </Text>
       <Text style={styles.subtitle}>
-        {recording ? "Speak naturally, then tap stop" : "Speak naturally for a few seconds"}
+        {recording ? "Stays on for 10 seconds, then stops automatically" : "Tap start and speak naturally"}
       </Text>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -108,9 +138,9 @@ export default function RecordScreen() {
       {loading ? (
         <ActivityIndicator size="large" color={Colors.primary} style={{ marginTop: Spacing.lg }} />
       ) : recording ? (
-        <TouchableOpacity style={[styles.button, styles.stopButton]} onPress={stopRecording}>
-          <Text style={styles.buttonText}>Stop Recording</Text>
-        </TouchableOpacity>
+        <View style={[styles.button, styles.recordingIndicator]}>
+          <Text style={styles.buttonText}>Recording...</Text>
+        </View>
       ) : (
         <TouchableOpacity style={[styles.button, styles.startButton]} onPress={startRecording}>
           <Text style={styles.buttonText}>Start Recording</Text>
@@ -125,26 +155,12 @@ export default function RecordScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: Spacing.lg,
-    backgroundColor: Colors.background,
-  },
+  container: { flex: 1, justifyContent: "center", alignItems: "center", padding: Spacing.lg, backgroundColor: Colors.background },
   circleWrap: { marginBottom: Spacing.lg },
   circle: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    backgroundColor: Colors.card,
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 3,
+    width: 140, height: 140, borderRadius: 70, backgroundColor: Colors.card,
+    justifyContent: "center", alignItems: "center",
+    shadowColor: "#000", shadowOpacity: 0.08, shadowRadius: 16, shadowOffset: { width: 0, height: 6 }, elevation: 3,
   },
   circleActive: { backgroundColor: "#FFECEC" },
   circleEmoji: { fontSize: 56 },
@@ -153,6 +169,6 @@ const styles = StyleSheet.create({
   error: { color: Colors.danger, marginBottom: Spacing.md, textAlign: "center" },
   button: { paddingVertical: 16, paddingHorizontal: 36, borderRadius: Radius.md },
   startButton: { backgroundColor: Colors.primary },
-  stopButton: { backgroundColor: Colors.danger },
+  recordingIndicator: { backgroundColor: Colors.danger, opacity: 0.7 },
   buttonText: { color: "#fff", fontSize: 16, fontWeight: "700" },
 });

@@ -1,7 +1,8 @@
+import { useFocusEffect } from "@react-navigation/native";
 import axios from "axios";
 import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
 import { ActivityIndicator, Dimensions, FlatList, StyleSheet, Text, View } from "react-native";
 import { LineChart } from "react-native-chart-kit";
 import { Colors, Radius, Spacing, stressColor } from "../../constants/appTheme";
@@ -23,26 +24,34 @@ export default function HistoryScreen() {
   const [error, setError] = useState("");
   const router = useRouter();
 
-  useEffect(() => {
-    const loadHistory = async () => {
-      const token = await SecureStore.getItemAsync("token");
-      if (!token) {
-        router.replace("/");
-        return;
-      }
-      try {
-        const res = await axios.get(`${BASE_URL}/api/stress/history`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setItems(res.data);
-      } catch (e: any) {
-        setError(getErrorMessage(e));
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadHistory();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      const loadHistory = async () => {
+        setLoading(true);
+        setError("");
+        const token = await SecureStore.getItemAsync("token");
+        if (!token) {
+          router.replace("/");
+          return;
+        }
+        try {
+          const res = await axios.get(`${BASE_URL}/api/stress/history`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (active) setItems(res.data);
+        } catch (e: any) {
+          if (active) setError(getErrorMessage(e));
+        } finally {
+          if (active) setLoading(false);
+        }
+      };
+      loadHistory();
+      return () => {
+        active = false;
+      };
+    }, [])
+  );
 
   if (loading) {
     return (
