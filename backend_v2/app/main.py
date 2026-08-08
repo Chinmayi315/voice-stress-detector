@@ -40,7 +40,6 @@ app.add_middleware(
 app.include_router(auth_router.router)
 app.include_router(stress_router.router)
 
-
-@app.get("/")
+@app.api_route("/", methods=["GET", "HEAD"])
 def health_check():
     return {"status": "ok", "message": "Voice Stress Detection API is running"}

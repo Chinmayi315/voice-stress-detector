@@ -104,6 +104,10 @@ export default function LoginScreen() {
           <TouchableOpacity style={[styles.button, styles.secondaryButton]} onPress={handleRegister} disabled={loading}>
             <Text style={styles.secondaryButtonText}>Create Account</Text>
           </TouchableOpacity>
+
+          <TouchableOpacity onPress={() => router.push("/forgot-password")} style={{ marginTop: Spacing.sm }}>
+            <Text style={styles.forgotText}>Forgot Password?</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </KeyboardAvoidingView>
@@ -137,4 +141,5 @@ const styles = StyleSheet.create({
   primaryButtonText: { color: "#fff", fontWeight: "700", fontSize: 16 },
   secondaryButton: { backgroundColor: "transparent" },
   secondaryButtonText: { color: Colors.primary, fontWeight: "600", fontSize: 14 },
+  forgotText: { color: Colors.textSecondary, textAlign: "center", fontSize: 13 },
 });
