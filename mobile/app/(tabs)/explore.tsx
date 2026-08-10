@@ -48,30 +48,51 @@ export default function RecordScreen() {
 
   const startRecording = async () => {
     setError("");
-    const { status } = await Audio.requestPermissionsAsync();
-    if (status !== "granted") {
-      setError("Microphone permission is required.");
-      return;
-    }
 
-    await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
-    const { recording: newRecording } = await Audio.Recording.createAsync(
-      Audio.RecordingOptionsPresets.HIGH_QUALITY
-    );
-    recordingRef.current = newRecording;
-    setRecording(newRecording);
-    setSecondsLeft(RECORDING_SECONDS);
-
-    timerRef.current = setInterval(() => {
-      setSecondsLeft((prev) => {
-        if (prev <= 1) {
-          if (timerRef.current) clearInterval(timerRef.current);
-          finishRecording();
-          return 0;
+    try {
+      // Defensive cleanup: if a previous recording object is still lingering
+      // (this is what causes the "second recording never starts" bug),
+      // force it to stop and release the microphone before starting a new one.
+      if (recordingRef.current) {
+        try {
+          await recordingRef.current.stopAndUnloadAsync();
+        } catch (cleanupErr) {
+          // ignore - it may already be stopped/unloaded
         }
-        return prev - 1;
+        recordingRef.current = null;
+      }
+
+      const { status } = await Audio.requestPermissionsAsync();
+      if (status !== "granted") {
+        setError("Microphone permission is required.");
+        return;
+      }
+
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
       });
-    }, 1000);
+
+      const { recording: newRecording } = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY
+      );
+      recordingRef.current = newRecording;
+      setRecording(newRecording);
+      setSecondsLeft(RECORDING_SECONDS);
+
+      timerRef.current = setInterval(() => {
+        setSecondsLeft((prev) => {
+          if (prev <= 1) {
+            if (timerRef.current) clearInterval(timerRef.current);
+            finishRecording();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } catch (e: any) {
+      setError("Could not start recording. Please try again. (" + (e.message || "unknown error") + ")");
+    }
   };
 
   const finishRecording = async () => {
@@ -85,6 +106,14 @@ export default function RecordScreen() {
 
     try {
       await activeRecording.stopAndUnloadAsync();
+
+      // IMPORTANT: release the microphone session explicitly. Without this,
+      // some Android devices silently refuse to start a second recording.
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+      });
+
       const uri = activeRecording.getURI();
 
       const token = await SecureStore.getItemAsync("token");
